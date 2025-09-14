@@ -1,0 +1,10 @@
+[proxy]
+listen_ip = "127.0.0.1"
+listen_port = 8080
+dst_ip = "192.168.1.100"
+dst_port = 80
+protocol = "tcp"
+
+[ip_filter]
+allow_list = ["192.168.1.10", "192.168.1.20"]
+# deny_list = ["10.0.0.1", "10.0.0.2"]

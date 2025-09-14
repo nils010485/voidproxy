@@ -1,0 +1,259 @@
+use crate::config::{Config, Protocol};
+use crate::metrics::InstanceMetrics;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::net::IpAddr;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/**
+ * Represents a proxy instance with its configuration and runtime state.
+ *
+ * Each proxy instance has a unique ID, name, configuration, current status,
+ * timestamps for creation and startup, and associated metrics.
+ */
+pub struct ProxyInstance {
+    pub id: Uuid,
+    pub name: String,
+    pub config: Config,
+    pub status: InstanceStatus,
+    pub created_at: DateTime<Utc>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub auto_start: bool,
+    #[serde(skip, default = "default_metrics")]
+    pub metrics: Arc<InstanceMetrics>,
+}
+
+fn default_metrics() -> Arc<InstanceMetrics> {
+    Arc::new(InstanceMetrics::new())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+/**
+ * Runtime status of a proxy instance.
+ *
+ * Tracks the current operational state of a proxy instance through its lifecycle.
+ */
+pub enum InstanceStatus {
+    Stopped,
+    Running,
+    Error,
+    Starting,
+    Stopping,
+}
+
+impl ProxyInstance {
+    pub fn new(name: String, config: Config, auto_start: bool) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name,
+            config,
+            status: InstanceStatus::Stopped,
+            created_at: Utc::now(),
+            started_at: None,
+            auto_start,
+            metrics: Arc::new(InstanceMetrics::new()),
+        }
+    }
+
+    pub fn start(&mut self) {
+        self.status = InstanceStatus::Starting;
+        self.started_at = Some(Utc::now());
+    }
+
+    pub fn set_running(&mut self) {
+        self.status = InstanceStatus::Running;
+    }
+
+    pub fn stop(&mut self) {
+        self.status = InstanceStatus::Stopping;
+        self.started_at = None;
+    }
+
+    pub fn set_stopped(&mut self) {
+        self.status = InstanceStatus::Stopped;
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/**
+ * Request structure for creating a new proxy instance.
+ *
+ * Contains all the necessary parameters to create and configure a proxy instance.
+ */
+pub struct CreateInstanceRequest {
+    pub name: String,
+    pub listen_ip: IpAddr,
+    pub listen_port: u16,
+    pub dst_ip: IpAddr,
+    pub dst_port: u16,
+    pub protocol: Protocol,
+    pub auto_start: bool,
+    pub allow_list: Option<Vec<IpAddr>>,
+    pub deny_list: Option<Vec<IpAddr>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/**
+ * String-based request structure for creating a proxy instance.
+ *
+ * Used for API requests where IP addresses are provided as strings
+ * and need to be parsed and validated.
+ */
+pub struct CreateInstanceRequestStrings {
+    pub name: String,
+    pub listen_ip: String,
+    pub listen_port: u16,
+    pub dst_ip: String,
+    pub dst_port: u16,
+    pub protocol: Protocol,
+    pub auto_start: bool,
+    pub allow_list: Option<Vec<String>>,
+    pub deny_list: Option<Vec<String>>,
+}
+
+impl CreateInstanceRequestStrings {
+    pub fn to_typed(&self) -> Result<CreateInstanceRequest, String> {
+        let listen_ip = self
+            .listen_ip
+            .parse()
+            .map_err(|e| format!("Invalid listen IP: {}", e))?;
+        let dst_ip = self
+            .dst_ip
+            .parse()
+            .map_err(|e| format!("Invalid destination IP: {}", e))?;
+
+        let allow_list = self
+            .allow_list
+            .as_ref()
+            .map(|list| {
+                list.iter()
+                    .map(|s| {
+                        s.parse()
+                            .map_err(|e| format!("Invalid allow IP {}: {}", s, e))
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()
+            .map_err(|e| format!("Invalid allow list: {}", e))?;
+
+        let deny_list = self
+            .deny_list
+            .as_ref()
+            .map(|list| {
+                list.iter()
+                    .map(|s| {
+                        s.parse()
+                            .map_err(|e| format!("Invalid deny IP {}: {}", s, e))
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()
+            .map_err(|e| format!("Invalid deny list: {}", e))?;
+
+        Ok(CreateInstanceRequest {
+            name: self.name.clone(),
+            listen_ip,
+            listen_port: self.listen_port,
+            dst_ip,
+            dst_port: self.dst_port,
+            protocol: self.protocol,
+            auto_start: self.auto_start,
+            allow_list,
+            deny_list,
+        })
+    }
+}
+
+impl CreateInstanceRequest {
+    pub fn to_config(&self) -> Config {
+        Config {
+            proxy: crate::config::ProxyConfig {
+                listen_ip: self.listen_ip,
+                listen_port: self.listen_port,
+                dst_ip: self.dst_ip,
+                dst_port: self.dst_port,
+                protocol: self.protocol,
+            },
+            ip_filter: if self.allow_list.is_some() || self.deny_list.is_some() {
+                Some(crate::config::IpFilterConfig {
+                    allow_list: self.allow_list.clone(),
+                    deny_list: self.deny_list.clone(),
+                })
+            } else {
+                None
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/**
+ * Request structure for updating an existing proxy instance.
+ *
+ * Contains optional fields for updating specific aspects of a proxy instance.
+ * Only provided fields will be updated.
+ */
+pub struct UpdateInstanceRequest {
+    pub name: Option<String>,
+    pub listen_ip: Option<IpAddr>,
+    pub listen_port: Option<u16>,
+    pub dst_ip: Option<IpAddr>,
+    pub dst_port: Option<u16>,
+    pub protocol: Option<Protocol>,
+    pub auto_start: Option<bool>,
+    pub allow_list: Option<Vec<IpAddr>>,
+    pub deny_list: Option<Vec<IpAddr>>,
+}
+
+impl UpdateInstanceRequest {
+    pub fn apply_to(&self, instance: &mut ProxyInstance) {
+        if let Some(name) = &self.name {
+            instance.name = name.clone();
+        }
+
+        if let Some(listen_ip) = self.listen_ip {
+            instance.config.proxy.listen_ip = listen_ip;
+        }
+
+        if let Some(listen_port) = self.listen_port {
+            instance.config.proxy.listen_port = listen_port;
+        }
+
+        if let Some(dst_ip) = self.dst_ip {
+            instance.config.proxy.dst_ip = dst_ip;
+        }
+
+        if let Some(dst_port) = self.dst_port {
+            instance.config.proxy.dst_port = dst_port;
+        }
+
+        if let Some(protocol) = self.protocol {
+            instance.config.proxy.protocol = protocol;
+        }
+
+        if let Some(auto_start) = self.auto_start {
+            instance.auto_start = auto_start;
+        }
+
+        if let Some(allow_list) = &self.allow_list {
+            instance.config.ip_filter = Some(crate::config::IpFilterConfig {
+                allow_list: Some(allow_list.clone()),
+                deny_list: None,
+            });
+        }
+
+        if let Some(deny_list) = &self.deny_list {
+            instance.config.ip_filter = Some(crate::config::IpFilterConfig {
+                allow_list: None,
+                deny_list: Some(deny_list.clone()),
+            });
+        }
+    }
+}
+
+pub type InstanceManager = Arc<RwLock<HashMap<Uuid, ProxyInstance>>>;
