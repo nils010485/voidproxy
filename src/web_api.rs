@@ -11,19 +11,16 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
 use uuid::Uuid;
-
 #[derive(Serialize)]
 struct ErrorResponse {
     error: String,
     message: String,
 }
-
 impl ErrorResponse {
     fn new(error: String, message: String) -> Self {
         Self { error, message }
     }
 }
-
 pub fn create_routes(instance_service: Arc<InstanceService>) -> Router {
     Router::new()
         .route("/api/instances", get(get_instances).post(create_instance))
@@ -45,22 +42,19 @@ pub fn create_routes(instance_service: Arc<InstanceService>) -> Router {
             "/api/instances/:id/session-metrics",
             get(get_instance_session_metrics),
         )
+        .route("/api/health", get(health_check))
         .with_state(instance_service)
 }
-
 #[derive(Deserialize, Debug)]
 pub struct InstanceQuery {
     pub status: Option<String>,
 }
-
 async fn get_instances(
     State(service): State<Arc<InstanceService>>,
     Query(params): Query<InstanceQuery>,
 ) -> Result<Json<Vec<crate::instance::ProxyInstance>>, StatusCode> {
     debug!("Getting instances with query: {:?}", params);
-
     let instances = service.get_instances().await;
-
     let filtered_instances = if let Some(status_filter) = &params.status {
         instances
             .into_iter()
@@ -71,28 +65,23 @@ async fn get_instances(
     } else {
         instances
     };
-
     Ok(Json(filtered_instances))
 }
-
 async fn get_instance(
     State(service): State<Arc<InstanceService>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<crate::instance::ProxyInstance>, StatusCode> {
     debug!("Getting instance: {}", id);
-
     match service.get_instance(id).await {
         Some(instance) => Ok(Json(instance)),
         None => Err(StatusCode::NOT_FOUND),
     }
 }
-
 async fn create_instance(
     State(service): State<Arc<InstanceService>>,
     Json(request): Json<CreateInstanceRequestStrings>,
 ) -> Result<Json<crate::instance::ProxyInstance>, (StatusCode, Json<ErrorResponse>)> {
     debug!("Creating instance: {}", request.name);
-
     match request.to_typed() {
         Ok(typed_request) => match service.create_instance(typed_request).await {
             Ok(instance) => {
@@ -113,14 +102,12 @@ async fn create_instance(
         }
     }
 }
-
 async fn update_instance(
     State(service): State<Arc<InstanceService>>,
     Path(id): Path<Uuid>,
     Json(request): Json<UpdateInstanceRequest>,
 ) -> Result<Json<crate::instance::ProxyInstance>, (StatusCode, Json<ErrorResponse>)> {
     debug!("Updating instance: {}", id);
-
     match service.update_instance(id, request).await {
         Ok(Some(instance)) => {
             info!("Updated instance: {}", instance.name);
@@ -140,13 +127,11 @@ async fn update_instance(
         }
     }
 }
-
 async fn delete_instance(
     State(service): State<Arc<InstanceService>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     debug!("Deleting instance: {}", id);
-
     match service.delete_instance(id).await {
         Ok(true) => {
             info!("Deleted instance: {}", id);
@@ -159,13 +144,11 @@ async fn delete_instance(
         }
     }
 }
-
 async fn start_instance(
     State(service): State<Arc<InstanceService>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<crate::instance::ProxyInstance>, StatusCode> {
     debug!("Starting instance: {}", id);
-
     match service.start_instance(id).await {
         Ok(true) => {
             if let Some(instance) = service.get_instance(id).await {
@@ -182,13 +165,11 @@ async fn start_instance(
         }
     }
 }
-
 async fn stop_instance(
     State(service): State<Arc<InstanceService>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<crate::instance::ProxyInstance>, StatusCode> {
     debug!("Stopping instance: {}", id);
-
     match service.stop_instance(id).await {
         Ok(true) => {
             if let Some(instance) = service.get_instance(id).await {
@@ -205,39 +186,32 @@ async fn stop_instance(
         }
     }
 }
-
 async fn get_instance_stats(
     State(service): State<Arc<InstanceService>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<crate::instance_manager::InstanceStats>, StatusCode> {
     debug!("Getting stats for instance: {}", id);
-
     let stats = service.get_instance_stats().await;
     match stats.get(&id) {
         Some(stats) => Ok(Json(stats.clone())),
         None => Err(StatusCode::NOT_FOUND),
     }
 }
-
 async fn get_all_stats(
     State(service): State<Arc<InstanceService>>,
 ) -> Json<std::collections::HashMap<Uuid, crate::instance_manager::InstanceStats>> {
     debug!("Getting all instance stats");
-
     let stats = service.get_instance_stats().await;
     Json(stats)
 }
-
 #[derive(Deserialize)]
 pub struct ImportConfigRequest {
     pub config: String,
 }
-
 async fn export_config(
     State(service): State<Arc<InstanceService>>,
 ) -> Result<Json<ExportConfigResponse>, (StatusCode, Json<ErrorResponse>)> {
     debug!("Exporting configuration");
-
     match service.export_config().await {
         Ok(config) => Ok(Json(ExportConfigResponse { config })),
         Err(e) => {
@@ -247,13 +221,11 @@ async fn export_config(
         }
     }
 }
-
 async fn import_config(
     State(service): State<Arc<InstanceService>>,
     Json(request): Json<ImportConfigRequest>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     debug!("Importing configuration");
-
     match service.import_config(&request.config).await {
         Ok(_) => {
             info!("Configuration imported successfully");
@@ -266,12 +238,10 @@ async fn import_config(
         }
     }
 }
-
 async fn create_backup(
     State(service): State<Arc<InstanceService>>,
 ) -> Result<Json<BackupResponse>, (StatusCode, Json<ErrorResponse>)> {
     debug!("Creating backup");
-
     match service.create_backup().await {
         Ok(backup_path) => {
             info!("Backup created: {:?}", backup_path);
@@ -286,34 +256,53 @@ async fn create_backup(
         }
     }
 }
-
 #[derive(Serialize)]
 struct ExportConfigResponse {
     pub config: String,
 }
-
 #[derive(Serialize)]
 struct BackupResponse {
     pub backup_path: String,
 }
-
 async fn get_performance_metrics(
     State(service): State<Arc<InstanceService>>,
 ) -> Json<crate::instance_manager::PerformanceMetrics> {
     debug!("Getting performance metrics");
-
     let metrics = service.get_performance_metrics().await;
     Json(metrics)
 }
-
 async fn get_instance_session_metrics(
     State(service): State<Arc<InstanceService>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<crate::metrics::SessionMetrics>, StatusCode> {
     debug!("Getting session metrics for instance: {}", id);
-
     match service.get_instance_session_metrics(&id).await {
         Some(metrics) => Ok(Json(metrics)),
         None => Err(StatusCode::NOT_FOUND),
     }
+}
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+    timestamp: String,
+    version: String,
+    uptime_secs: u64,
+    instance_count: usize,
+}
+async fn health_check(
+    State(service): State<Arc<InstanceService>>,
+) -> Result<Json<HealthResponse>, StatusCode> {
+    debug!("Health check requested");
+    let instances = service.get_instances().await;
+    let active_instances = instances.iter().filter(|inst| inst.status == crate::instance::InstanceStatus::Running).count();
+    Ok(Json(HealthResponse {
+        status: "healthy".to_string(),
+        timestamp: chrono::Utc::now().to_rfc3339(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        uptime_secs: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        instance_count: active_instances,
+    }))
 }

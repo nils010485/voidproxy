@@ -3,18 +3,15 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-
 pub struct IpCache {
     cache: Arc<RwLock<LruCache<IpAddr, CacheEntry>>>,
     ttl: Duration,
 }
-
 #[derive(Clone)]
 struct CacheEntry {
     allowed: bool,
     created_at: Instant,
 }
-
 impl IpCache {
     pub fn new(capacity: usize, ttl: Duration) -> Self {
         Self {
@@ -25,24 +22,17 @@ impl IpCache {
             ttl,
         }
     }
-
     pub async fn check_ip(&self, ip: &IpAddr, checker: impl Fn(&IpAddr) -> bool) -> bool {
-        // Check cache first
         {
             let mut cache = self.cache.write().await;
             if let Some(entry) = cache.get(ip) {
                 if entry.created_at.elapsed() <= self.ttl {
                     return entry.allowed;
                 }
-                // Entry expired, remove it
                 cache.pop(ip);
             }
         }
-
-        // Compute the result
         let allowed = checker(ip);
-
-        // Cache the result
         {
             let mut cache = self.cache.write().await;
             cache.put(
@@ -53,7 +43,6 @@ impl IpCache {
                 },
             );
         }
-
         allowed
     }
 }

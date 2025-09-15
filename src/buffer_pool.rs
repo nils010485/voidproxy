@@ -3,17 +3,18 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, Semaphore};
-
 #[derive(Clone)]
-/// A thread-safe buffer pool for efficient memory management in proxy operations.
-///
-/// This pool manages three tiers of buffers to reduce memory allocation overhead:
-/// - Small buffers (≤ 1024 bytes)
-/// - Medium buffers (≤ 8192 bytes)
-/// - Large buffers (> 8192 bytes, up to 65535 bytes)
-///
-/// The pool includes concurrency limiting to prevent excessive memory usage
-/// and automatic buffer recycling when buffers are dropped.
+/**
+ * A thread-safe buffer pool for efficient memory management in proxy operations.
+ *
+ * This pool manages three tiers of buffers to reduce memory allocation overhead:
+ * - Small buffers (≤ 1024 bytes)
+ * - Medium buffers (≤ 8192 bytes)
+ * - Large buffers (> 8192 bytes, up to 65535 bytes)
+ *
+ * The pool includes concurrency limiting to prevent excessive memory usage
+ * and automatic buffer recycling when buffers are dropped.
+ */
 pub struct BufferPool {
     small_buffers: Arc<Mutex<VecDeque<BytesMut>>>,
     medium_buffers: Arc<Mutex<VecDeque<BytesMut>>>,
@@ -21,7 +22,6 @@ pub struct BufferPool {
     max_pool_size: usize,
     concurrency_limiter: Arc<Semaphore>,
 }
-
 impl BufferPool {
     pub fn new(max_pool_size: usize, max_concurrent: usize) -> Self {
         Self {
@@ -32,10 +32,8 @@ impl BufferPool {
             concurrency_limiter: Arc::new(Semaphore::new(max_concurrent)),
         }
     }
-
     pub async fn acquire(&self, size: usize) -> PooledBuffer {
         let _permit = self.concurrency_limiter.acquire().await.unwrap();
-
         let buffer = if size <= 1024 {
             self.get_buffer(&self.small_buffers, 1024).await
         } else if size <= 8192 {
@@ -43,14 +41,12 @@ impl BufferPool {
         } else {
             self.get_buffer(&self.large_buffers, 65535).await
         };
-
         PooledBuffer {
             buffer,
             pool: std::sync::Arc::new(self.clone()),
             size_hint: size,
         }
     }
-
     async fn get_buffer(
         &self,
         pool: &Arc<Mutex<VecDeque<BytesMut>>>,
@@ -61,10 +57,8 @@ impl BufferPool {
             .pop_front()
             .unwrap_or_else(|| BytesMut::with_capacity(default_size))
     }
-
     async fn return_buffer(&self, mut buffer: BytesMut, size_hint: usize) {
         buffer.clear();
-
         let pool = if size_hint <= 1024 {
             &self.small_buffers
         } else if size_hint <= 8192 {
@@ -72,15 +66,12 @@ impl BufferPool {
         } else {
             &self.large_buffers
         };
-
         let mut pool_guard = pool.lock().await;
         if pool_guard.len() < self.max_pool_size {
             pool_guard.push_back(buffer);
         }
-        // Buffer is dropped if pool is full
-    }
+      }
 }
-
 /**
  * A pooled buffer that automatically returns itself to the buffer pool when dropped.
  *
@@ -94,7 +85,6 @@ pub struct PooledBuffer {
     pool: Arc<BufferPool>,
     size_hint: usize,
 }
-
 impl PooledBuffer {
     /**
  * Returns a mutable reference to the underlying BytesMut buffer.
@@ -109,7 +99,6 @@ impl PooledBuffer {
 pub fn as_mut(&mut self) -> &mut BytesMut {
         &mut self.buffer
     }
-
     /**
  * Clears the buffer contents.
  *
@@ -120,34 +109,27 @@ pub fn clear(&mut self) {
         self.buffer.clear();
     }
 }
-
 impl Drop for PooledBuffer {
     fn drop(&mut self) {
         let pool = self.pool.clone();
         let buffer = std::mem::take(&mut self.buffer);
         let size_hint = self.size_hint;
-
-        // Spawn a task to return the buffer to avoid blocking the drop
         tokio::spawn(async move {
             pool.return_buffer(buffer, size_hint).await;
         });
     }
 }
-
 impl std::ops::Deref for PooledBuffer {
     type Target = BytesMut;
-
     fn deref(&self) -> &Self::Target {
         &self.buffer
     }
 }
-
 impl std::ops::DerefMut for PooledBuffer {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.buffer
     }
 }
-
 #[derive(Clone)]
 /**
  * Represents a UDP session for stateless UDP proxy operations.
@@ -161,7 +143,6 @@ pub struct UdpSession {
     pub local_addr: std::net::SocketAddr,
     pub last_activity: Instant,
 }
-
 impl UdpSession {
     /**
      * Creates a new UDP session with the given client socket and local address.
@@ -183,7 +164,6 @@ impl UdpSession {
             last_activity: Instant::now(),
         }
     }
-
     /**
      * Updates the last activity timestamp for this session.
      *
@@ -193,7 +173,6 @@ impl UdpSession {
     pub fn update_activity(&mut self) {
         self.last_activity = Instant::now();
     }
-
     /**
      * Checks if this session has expired based on the given timeout duration.
      *
@@ -207,7 +186,6 @@ impl UdpSession {
         self.last_activity.elapsed() > timeout
     }
 }
-
 /**
  * Manages UDP sessions for stateless UDP proxy operations.
  *
@@ -221,7 +199,6 @@ pub struct UdpSessionManager {
     session_timeout: Duration,
     cleanup_interval: Duration,
 }
-
 impl UdpSessionManager {
     /**
  * Creates a new UdpSessionManager with the specified timeout and cleanup interval.
@@ -235,17 +212,13 @@ impl UdpSessionManager {
  */
 pub fn new(session_timeout: Duration, cleanup_interval: Duration) -> Self {
         let sessions = Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new()));
-
-        // Start cleanup task
-        Self::start_cleanup_task(sessions.clone(), session_timeout, cleanup_interval);
-
+          Self::start_cleanup_task(sessions.clone(), session_timeout, cleanup_interval);
         Self {
             sessions,
             session_timeout,
             cleanup_interval,
         }
     }
-
     fn start_cleanup_task(
         sessions: Arc<
             tokio::sync::RwLock<std::collections::HashMap<std::net::SocketAddr, UdpSession>>,
@@ -259,9 +232,7 @@ pub fn new(session_timeout: Duration, cleanup_interval: Duration) -> Self {
                 interval.tick().await;
                 let mut sessions_guard = sessions.write().await;
                 let initial_count = sessions_guard.len();
-
                 sessions_guard.retain(|_, session| !session.is_expired(timeout));
-
                 let removed = initial_count - sessions_guard.len();
                 if removed > 0 {
                     tracing::debug!("Cleaned up {} expired UDP sessions", removed);
@@ -269,25 +240,20 @@ pub fn new(session_timeout: Duration, cleanup_interval: Duration) -> Self {
             }
         });
     }
-
     pub async fn get_or_create_session(
         &self,
         peer_addr: std::net::SocketAddr,
     ) -> Option<UdpSession> {
         let mut sessions = self.sessions.write().await;
-
         if let Some(session) = sessions.get_mut(&peer_addr) {
             session.update_activity();
-            return None; // Session exists, will be handled by existing task
+            return None; 
         }
-
-        // Create new session
         let bind_addr = if peer_addr.is_ipv4() {
             "0.0.0.0:0"
         } else {
             "[::]:0"
         };
-
         match tokio::net::UdpSocket::bind(bind_addr).await {
             Ok(client_socket) => {
                 let local_addr = client_socket.local_addr().unwrap();
@@ -301,23 +267,25 @@ pub fn new(session_timeout: Duration, cleanup_interval: Duration) -> Self {
             }
         }
     }
-
     pub async fn remove_session(&self, peer_addr: &std::net::SocketAddr) {
         let mut sessions = self.sessions.write().await;
         sessions.remove(peer_addr);
     }
-
-    /// Get the current session timeout duration
+    /**
+     * Get the current session timeout duration.
+     */
     pub fn session_timeout(&self) -> Duration {
         self.session_timeout
     }
-
-    /// Get the cleanup interval duration
+    /**
+     * Get the cleanup interval duration.
+     */
     pub fn cleanup_interval(&self) -> Duration {
         self.cleanup_interval
     }
-
-    /// Get the number of active sessions
+    /**
+     * Get the number of active sessions.
+     */
     pub async fn active_session_count(&self) -> usize {
         self.sessions.read().await.len()
     }
