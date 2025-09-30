@@ -352,7 +352,7 @@ async fn test_proxy_instance_deserialization() {
                 "listen_port": 8080,
                 "dst_ip": "192.168.1.100",
                 "dst_port": 80,
-                "protocol": "Tcp",
+                "protocol": "tcp",
                 "connect_timeout_secs": 30,
                 "idle_timeout_secs": 300,
                 "log_level": "info"

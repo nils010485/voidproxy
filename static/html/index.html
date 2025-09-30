@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidProxy - Advanced Proxy Management System</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/ui.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <span id="logo-icon"></span>
+                    <div>
+                        <div class="logo-text">Void<span class="logo-brand">Proxy</span></div>
+                        <div style="color: var(--text-secondary); font-size: var(--font-sm);">Advanced Proxy Management System</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showCreateModal()">
+                        <span id="new-instance-icon"></span>
+                        New Instance
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon active">
+                            <span id="server-icon"></span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Active</div>
+                    </div>
+                    <div class="stat-value" id="activeCount">0</div>
+                    <div class="stat-label">Active Instances</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon inactive">
+                            <span id="inactive-icon"></span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Inactive</div>
+                    </div>
+                    <div class="stat-value" id="inactiveCount">0</div>
+                    <div class="stat-label">Inactive Instances</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="color: var(--primary);">
+                            <span id="total-icon"></span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Total</div>
+                    </div>
+                    <div class="stat-value" id="totalCount">0</div>
+                    <div class="stat-label">Total Instances</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="color: var(--warning);">
+                            <span id="traffic-icon"></span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Traffic</div>
+                    </div>
+                    <div class="stat-value" id="trafficCount">0</div>
+                    <div class="stat-label">MB Transferred</div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Listen Address</th>
+                            <th>Destination</th>
+                            <th>Protocol</th>
+                            <th>Status</th>
+                            <th>Traffic (Total | Rate)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="instancesTableBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: var(--spacing-16);">
+                                <div class="empty-state">
+                                    <div class="empty-icon" id="empty-network-icon"></div>
+                                    <div class="empty-title">No Proxy Instances</div>
+                                    <div class="empty-description">Create your first proxy instance to get started</div>
+                                    <button class="btn btn-primary" onclick="showCreateModal()">
+                                        <span class="btn-icon" id="empty-plus-icon"></span>
+                                        Create Instance
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Create/Edit Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Create New Proxy Instance</h2>
+                <button class="modal-close" onclick="hideModal()">
+                    <span id="modal-close-icon"></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="instanceForm">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-tag-icon"></span> Instance Name
+                        </label>
+                        <input type="text" class="form-input" id="instanceName" placeholder="My Proxy Instance" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-location-icon"></span> Listen Address
+                        </label>
+                        <input type="text" class="form-input" id="listenIp" placeholder="127.0.0.1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-door-open-icon"></span> Listen Port
+                        </label>
+                        <input type="number" class="form-input" id="listenPort" min="1" max="65535" placeholder="8080" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-globe-icon"></span> Destination Address
+                        </label>
+                        <input type="text" class="form-input" id="dstIp" placeholder="127.0.0.1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-door-closed-icon"></span> Destination Port
+                        </label>
+                        <input type="number" class="form-input" id="dstPort" min="1" max="65535" placeholder="80" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-exchange-icon"></span> Protocol
+                        </label>
+                        <select class="form-select" id="instanceProtocol">
+                            <option value="tcp">TCP</option>
+                            <option value="udp">UDP</option>
+                            <option value="both">TCP + UDP</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-shield-icon"></span> IP Filtering
+                        </label>
+                        <select class="form-select" id="ipFilterType">
+                            <option value="none">No filtering</option>
+                            <option value="allow">Allow list</option>
+                            <option value="deny">Deny list</option>
+                        </select>
+                        <textarea class="form-textarea" id="ipList" rows="4" placeholder="Enter IP addresses, one per line" style="display: none; margin-top: var(--spacing-2);"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-clock-icon"></span> Connection Timeout (seconds)
+                        </label>
+                        <input type="number" class="form-input" id="connectTimeout" min="1" max="300" value="30" placeholder="30">
+                        <small style="color: var(--text-muted);">Max time to establish connection (1-300s)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-hourglass-icon"></span> Idle Timeout (seconds)
+                        </label>
+                        <input type="number" class="form-input" id="idleTimeout" min="1" max="3600" value="300" placeholder="300">
+                        <small style="color: var(--text-muted);">Max idle time before disconnect (1-3600s)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span id="form-log-icon"></span> Log Level
+                        </label>
+                        <select class="form-select" id="logLevel">
+                            <option value="error">Error</option>
+                            <option value="warn" selected>Warning</option>
+                            <option value="info">Info</option>
+                            <option value="debug">Debug</option>
+                            <option value="trace">Trace</option>
+                        </select>
+                        <small style="color: var(--text-muted);">Verbosity level for this instance</small>
+                    </div>
+
+                    <div class="form-checkbox-group">
+                        <input type="checkbox" class="form-checkbox" id="autoStart">
+                        <label for="autoStart" class="form-label">
+                            Start automatically on launch
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" onclick="hideModal()">
+                    <span class="btn-icon" id="modal-cancel-icon"></span>
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveInstance()">
+                    <span class="btn-icon" id="modal-save-icon"></span>
+                    <span id="saveButtonText">Create Instance</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/core.js"></script>
+    <script>
+        // Inject API port from server
+        window.API_PORT = '{{API_PORT}}';
+        window.API_BASE_URL = `http://127.0.0.1:${window.API_PORT}`;
+    </script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

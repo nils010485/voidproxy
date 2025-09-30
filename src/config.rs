@@ -102,8 +102,7 @@ impl Config {
         }
         if self.proxy.listen_ip.is_loopback() && !self.proxy.dst_ip.is_loopback() {
             tracing::warn!(
-                "Instance '{}' listens on loopback but forwards to non-loopback - this may create a security risk",
-                std::any::type_name::<Self>()
+                "Instance listens on loopback but forwards to non-loopback - this may create a security risk"
             );
         }
         if let Some(ref ip_filter) = self.ip_filter {

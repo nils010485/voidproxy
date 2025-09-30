@@ -9,7 +9,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 pub struct InstanceService {
     instances: InstanceManager,
@@ -27,13 +27,12 @@ struct InstanceHandle {
 pub type PerformanceMetrics = crate::metrics::SystemMetrics;
 impl InstanceService {
     pub fn with_storage(storage: Arc<StorageManager>) -> Self {
-        let service = Self {
+        Self {
             instances: Arc::new(RwLock::new(HashMap::new())),
             running_instances: Arc::new(RwLock::new(HashMap::new())),
             storage,
             metrics_manager: Arc::new(MetricsManager::new()),
-        };
-        service
+        }
     }
     pub async fn create_instance(&self, request: CreateInstanceRequest) -> Result<ProxyInstance> {
         let config = request.to_config();
@@ -79,6 +78,7 @@ impl InstanceService {
                 error!("Failed to update instance in storage: {}", e);
             }
             if was_running {
+                warn!("Restarting instance {} due to configuration update", id);
                 self.stop_instance_internal(id).await?;
                 self.start_instance_internal(id).await?;
             }
@@ -184,12 +184,16 @@ impl InstanceService {
                 if let Some(cancel_token) = handle.cancel_token {
                     cancel_token.cancel();
                 }
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                 if let Some(tcp_handle) = handle.tcp_handle {
-                    tcp_handle.abort();
+                    if !tcp_handle.is_finished() {
+                        tcp_handle.abort();
+                    }
                 }
                 if let Some(udp_handle) = handle.udp_handle {
-                    udp_handle.abort();
+                    if !udp_handle.is_finished() {
+                        udp_handle.abort();
+                    }
                 }
             }
             instance.set_stopped();

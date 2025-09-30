@@ -24,7 +24,7 @@ async fn test_udp_proxy_creation() {
     let instance_id = Uuid::new_v4();
     let instances = Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new()));
 
-    let proxy = UdpProxy::new(config, instance_id, instances);
+    let _proxy = UdpProxy::new(config, instance_id, instances);
 
     assert!(true);
 }
@@ -150,7 +150,7 @@ async fn test_udp_proxy_buffer_pool() {
 
     let instance_id = Uuid::new_v4();
     let instances = Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new()));
-    let proxy = UdpProxy::new(config, instance_id, instances);
+    let _proxy = UdpProxy::new(config, instance_id, instances);
 
     assert!(true);
 }
@@ -173,7 +173,7 @@ async fn test_udp_proxy_session_manager() {
 
     let instance_id = Uuid::new_v4();
     let instances = Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new()));
-    let proxy = UdpProxy::new(config, instance_id, instances);
+    let _proxy = UdpProxy::new(config, instance_id, instances);
 
     assert!(true);
 }
@@ -198,7 +198,7 @@ async fn test_udp_proxy_clone() {
     let instances = Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new()));
     let proxy = UdpProxy::new(config, instance_id, instances);
 
-    let proxy_clone = proxy.clone();
+    let _proxy_clone = proxy.clone();
 
     assert!(true);
 }
@@ -221,7 +221,7 @@ async fn test_udp_proxy_timeout_values() {
 
     let instance_id = Uuid::new_v4();
     let instances = Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new()));
-    let proxy = UdpProxy::new(config, instance_id, instances);
+    let _proxy = UdpProxy::new(config, instance_id, instances);
 
     assert!(true);
 }
@@ -244,7 +244,7 @@ async fn test_udp_proxy_ip_cache() {
 
     let instance_id = Uuid::new_v4();
     let instances = Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new()));
-    let proxy = UdpProxy::new(config, instance_id, instances);
+    let _proxy = UdpProxy::new(config, instance_id, instances);
 
     assert!(true);
 }

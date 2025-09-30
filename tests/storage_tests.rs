@@ -9,7 +9,7 @@ async fn test_storage_manager_creation() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("test_config.toml");
 
-    let storage = StorageManager::new(config_path);
+    let _storage = StorageManager::new(config_path);
 
     assert!(true);
 }
@@ -117,8 +117,9 @@ async fn test_storage_manager_get_backup_path() {
     let storage = StorageManager::new(config_path.clone());
     let backup_path = storage.get_backup_path().await;
 
-    assert!(backup_path.extension().unwrap().to_str().unwrap().starts_with("backup_"));
-    assert!(backup_path.extension().unwrap().to_str().unwrap().ends_with(".toml"));
+    let backup_name = backup_path.file_name().unwrap().to_str().unwrap();
+    assert!(backup_name.contains("backup_"));
+    assert!(backup_name.ends_with(".toml"));
 }
 
 #[tokio::test]

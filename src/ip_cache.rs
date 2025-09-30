@@ -23,26 +23,21 @@ impl IpCache {
         }
     }
     pub async fn check_ip(&self, ip: &IpAddr, checker: impl Fn(&IpAddr) -> bool) -> bool {
-        {
-            let mut cache = self.cache.write().await;
-            if let Some(entry) = cache.get(ip) {
-                if entry.created_at.elapsed() <= self.ttl {
-                    return entry.allowed;
-                }
-                cache.pop(ip);
+        let mut cache = self.cache.write().await;
+        if let Some(entry) = cache.get(ip) {
+            if entry.created_at.elapsed() <= self.ttl {
+                return entry.allowed;
             }
+            cache.pop(ip);
         }
         let allowed = checker(ip);
-        {
-            let mut cache = self.cache.write().await;
-            cache.put(
-                *ip,
-                CacheEntry {
-                    allowed,
-                    created_at: Instant::now(),
-                },
-            );
-        }
+        cache.put(
+            *ip,
+            CacheEntry {
+                allowed,
+                created_at: Instant::now(),
+            },
+        );
         allowed
     }
 }

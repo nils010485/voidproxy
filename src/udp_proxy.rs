@@ -9,6 +9,15 @@ use tokio::net::UdpSocket;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
+
+struct UdpPacketHandler {
+    socket: Arc<UdpSocket>,
+    config: Arc<Config>,
+    session_manager: Arc<UdpSessionManager>,
+    instance_id: Uuid,
+    instances: crate::instance::InstanceManager,
+    cancel_token: Arc<CancellationToken>,
+}
 #[derive(Clone)]
 /**
  * UDP proxy implementation for stateless UDP packet forwarding.
@@ -89,16 +98,18 @@ impl UdpProxy {
                                 continue;
                             }
                             let data = buffer[..len].to_vec();
-                            let session_manager = self.session_manager.clone();
-                            let config = self.config.clone();
-                            let socket_clone = socket.clone();
-                            let instance_id = self.instance_id;
-                            let instances = self.instances.clone();
+                            let handler = UdpPacketHandler {
+                                socket: socket.clone(),
+                                config: self.config.clone(),
+                                session_manager: self.session_manager.clone(),
+                                instance_id: self.instance_id,
+                                instances: self.instances.clone(),
+                                cancel_token: cancel_token.clone(),
+                            };
                             let peer_addr_for_cleanup = peer_addr;
-                            let cancel_token_clone = cancel_token.clone();
                             tokio::spawn(async move {
                                 let result = Self::handle_udp_packet_with_token(
-                                    data, peer_addr, socket_clone, config, session_manager, instance_id, instances, cancel_token_clone
+                                    data, peer_addr, handler
                                 ).await;
                                 if let Err(e) = result {
                                     error!("Error handling UDP packet from {}: {}", peer_addr_for_cleanup, e);
@@ -120,30 +131,26 @@ impl UdpProxy {
     async fn handle_udp_packet_with_token(
         data: Vec<u8>,
         peer_addr: SocketAddr,
-        socket: Arc<UdpSocket>,
-        config: Arc<Config>,
-        session_manager: Arc<UdpSessionManager>,
-        instance_id: Uuid,
-        instances: crate::instance::InstanceManager,
-        cancel_token: Arc<CancellationToken>,
+        handler: UdpPacketHandler,
     ) -> Result<()> {
-        let dst_addr = SocketAddr::new(config.proxy.dst_ip, config.proxy.dst_port);
+        let dst_addr = SocketAddr::new(handler.config.proxy.dst_ip, handler.config.proxy.dst_port);
         debug!(
             "Received {} bytes from UDP client {}",
             data.len(),
             peer_addr
         );
-        let _client_socket = match session_manager.get_or_create_session(peer_addr).await {
+        let client_socket = match handler.session_manager.get_or_create_session(peer_addr).await {
             Some(session) => {
-                let session_manager_clone = session_manager.clone();
+                let session_manager_clone = handler.session_manager.clone();
                 let peer_addr_clone = peer_addr;
-                let server_socket = socket.clone();
-                let instance_id_clone = instance_id;
-                let instances_clone = instances.clone();
-                let cancel_token_clone = cancel_token.clone();
+                let server_socket = handler.socket.clone();
+                let instance_id_clone = handler.instance_id;
+                let instances_clone = handler.instances.clone();
+                let cancel_token_clone = handler.cancel_token.clone();
+                let client_socket_clone = session.client_socket.clone();
                 tokio::spawn(async move {
                     if let Err(e) = Self::handle_udp_responses_with_token(
-                        session.client_socket.clone(),
+                        client_socket_clone,
                         peer_addr_clone,
                         server_socket,
                         session_manager_clone,
@@ -156,7 +163,7 @@ impl UdpProxy {
                         error!("Error handling UDP responses: {}", e);
                     }
                 });
-                session.local_addr
+                session.client_socket
             }
             None => {
                 return Err(anyhow::anyhow!(
@@ -165,7 +172,7 @@ impl UdpProxy {
                 ));
             }
         };
-        socket
+        client_socket
             .send_to(&data, dst_addr)
             .await
             .context("Failed to send UDP packet to destination")?;
@@ -177,8 +184,8 @@ impl UdpProxy {
         );
         let bytes_sent = data.len() as u64;
         if bytes_sent > 0 {
-            let instances = instances.read().await;
-            if let Some(instance) = instances.get(&instance_id) {
+            let instances = handler.instances.read().await;
+            if let Some(instance) = instances.get(&handler.instance_id) {
                 instance.metrics.add_bytes_received(bytes_sent);
             }
         }

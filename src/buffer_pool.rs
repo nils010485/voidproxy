@@ -1,4 +1,5 @@
 use bytes::BytesMut;
+use std::convert::AsMut;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -33,7 +34,7 @@ impl BufferPool {
         }
     }
     pub async fn acquire(&self, size: usize) -> PooledBuffer {
-        let _permit = self.concurrency_limiter.acquire().await.unwrap();
+        let _permit = self.concurrency_limiter.acquire().await.expect("Semaphore should not be closed");
         let buffer = if size <= 1024 {
             self.get_buffer(&self.small_buffers, 1024).await
         } else if size <= 8192 {
@@ -41,7 +42,7 @@ impl BufferPool {
         } else {
             self.get_buffer(&self.large_buffers, 65535).await
         };
-        PooledBuffer {
+                PooledBuffer {
             buffer,
             pool: std::sync::Arc::new(self.clone()),
             size_hint: size,
@@ -96,9 +97,6 @@ impl PooledBuffer {
  * Returns:
  *   A mutable reference to the BytesMut buffer.
  */
-pub fn as_mut(&mut self) -> &mut BytesMut {
-        &mut self.buffer
-    }
     /**
  * Clears the buffer contents.
  *
@@ -109,14 +107,22 @@ pub fn clear(&mut self) {
         self.buffer.clear();
     }
 }
+impl AsMut<BytesMut> for PooledBuffer {
+    fn as_mut(&mut self) -> &mut BytesMut {
+        &mut self.buffer
+    }
+}
+
 impl Drop for PooledBuffer {
     fn drop(&mut self) {
         let pool = self.pool.clone();
         let buffer = std::mem::take(&mut self.buffer);
         let size_hint = self.size_hint;
-        tokio::spawn(async move {
-            pool.return_buffer(buffer, size_hint).await;
-        });
+                if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn(async move {
+                pool.return_buffer(buffer, size_hint).await;
+            });
+        }
     }
 }
 impl std::ops::Deref for PooledBuffer {
@@ -140,6 +146,7 @@ impl std::ops::DerefMut for PooledBuffer {
  */
 pub struct UdpSession {
     pub client_socket: Arc<tokio::net::UdpSocket>,
+    #[allow(dead_code)]
     pub local_addr: std::net::SocketAddr,
     pub last_activity: Instant,
 }

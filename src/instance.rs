@@ -22,11 +22,8 @@ pub struct ProxyInstance {
     pub created_at: DateTime<Utc>,
     pub started_at: Option<DateTime<Utc>>,
     pub auto_start: bool,
-    #[serde(skip, default = "default_metrics")]
+    #[serde(skip)]
     pub metrics: Arc<InstanceMetrics>,
-}
-fn default_metrics() -> Arc<InstanceMetrics> {
-    Arc::new(InstanceMetrics::new())
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -231,16 +228,10 @@ impl UpdateInstanceRequest {
         if let Some(auto_start) = self.auto_start {
             instance.auto_start = auto_start;
         }
-        if let Some(allow_list) = &self.allow_list {
+        if self.allow_list.is_some() || self.deny_list.is_some() {
             instance.config.ip_filter = Some(crate::config::IpFilterConfig {
-                allow_list: Some(allow_list.clone()),
-                deny_list: None,
-            });
-        }
-        if let Some(deny_list) = &self.deny_list {
-            instance.config.ip_filter = Some(crate::config::IpFilterConfig {
-                allow_list: None,
-                deny_list: Some(deny_list.clone()),
+                allow_list: self.allow_list.clone(),
+                deny_list: self.deny_list.clone(),
             });
         }
         if let Some(connect_timeout_secs) = self.connect_timeout_secs {

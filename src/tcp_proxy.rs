@@ -120,7 +120,7 @@ impl TcpProxy {
                 );
                 let instances = instances.read().await;
                 if let Some(instance) = instances.get(&instance_id) {
-                    instance.metrics.add_bytes_received(1); 
+                    instance.metrics.errors.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 }
                 return Ok(());
             }
@@ -131,7 +131,7 @@ impl TcpProxy {
                 );
                 let instances = instances.read().await;
                 if let Some(instance) = instances.get(&instance_id) {
-                    instance.metrics.add_bytes_received(1); 
+                    instance.metrics.errors.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 }
                 return Ok(());
             }
@@ -141,8 +141,7 @@ impl TcpProxy {
         let idle_timeout_duration = Duration::from_secs(config.proxy.idle_timeout_secs);
         let idle_timeout_secs = config.proxy.idle_timeout_secs;
         let client_to_server = {
-            let instance_id = instance_id;
-            let buffer_pool = buffer_pool.clone();
+                        let buffer_pool = buffer_pool.clone();
             let instances_for_client = instances.clone();
             let cancel_token_clone = cancel_token.clone();
             let idle_timeout = idle_timeout_duration;
@@ -194,8 +193,7 @@ impl TcpProxy {
             })
         };
         let server_to_client = {
-            let instance_id = instance_id;
-            let buffer_pool = buffer_pool.clone();
+                        let buffer_pool = buffer_pool.clone();
             let instances_for_server = instances.clone();
             let cancel_token_clone = cancel_token.clone();
             let idle_timeout = idle_timeout_duration;

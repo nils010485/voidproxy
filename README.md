@@ -145,24 +145,33 @@ voidProxy/
 ├── src/
 │   ├── lib.rs                 # Main library entry point
 │   ├── main.rs                # Application entry point
-│   ├── config.rs              # Configuration management
+│   ├── config.rs              # Configuration management (15 unit tests)
 │   ├── instance.rs            # Proxy instance implementation
 │   ├── instance_manager.rs    # Instance lifecycle management
 │   ├── tcp_proxy.rs           # TCP proxy implementation
 │   ├── udp_proxy.rs           # UDP proxy implementation
-│   ├── buffer_pool.rs         # Memory management
-│   ├── ip_cache.rs            # IP filtering cache
-│   ├── storage.rs             # Configuration persistence
-│   ├── metrics.rs             # Statistics collection
+│   ├── buffer_pool.rs         # Memory management with three-tier buffer system
+│   ├── ip_cache.rs            # IP filtering with TTL and LRU eviction
+│   ├── storage.rs             # Configuration persistence (3 unit tests)
+│   ├── metrics.rs             # Statistics collection and monitoring
 │   ├── web_api.rs             # REST API endpoints
-│   └── web_ui.rs              # Web UI server
-├── static/                    # Web assets
-│   ├── index.html            # Main UI page
-│   ├── app.js                # Application logic
-│   ├── core.js               # Core utilities
-│   ├── icons.js              # Icon definitions
-│   ├── style.css             # Main styles
-│   └── ui.css                # UI components
+│   └── web_ui.rs              # Web UI server with embedded static files
+├── tests/                     # Integration tests (10 tests total)
+│   ├── config_tests.rs        # Configuration validation (2 tests)
+│   ├── instance_tests.rs      # Instance lifecycle management (2 tests)
+│   ├── metrics_tests.rs       # Performance metrics (2 tests)
+│   ├── ip_cache_tests.rs      # IP caching functionality (2 tests)
+│   └── buffer_pool_tests.rs   # Buffer pool operations (2 tests)
+├── static/                    # Web assets (embedded in binary)
+│   ├── html/
+│   │   └── index.html        # Main UI page
+│   ├── js/
+│   │   ├── app.js            # Application logic
+│   │   ├── core.js           # Core utilities
+│   │   └── icons.js          # SVG icon definitions
+│   └── css/
+│       ├── style.css         # Main styles
+│       └── ui.css            # UI component styles
 ├── Cargo.toml                # Project dependencies
 ├── instances.toml            # Default configuration
 └── README.md                 # This file
@@ -170,15 +179,37 @@ voidProxy/
 
 ## 🧪 Testing
 
+The project includes comprehensive test coverage with **27 total tests**:
+
+### Test Coverage
+- **17 unit tests** embedded in source files
+  - `src/config.rs`: 15 tests for configuration validation and IP filtering
+  - `src/storage.rs`: 3 tests for persistence operations
+- **10 integration tests** organized by module
+  - Configuration validation and creation
+  - Proxy instance lifecycle management
+  - Performance metrics with overflow protection
+  - IP caching with TTL and LRU eviction
+  - Buffer pool memory management
+
+### Running Tests
+
 ```bash
-# Run all tests
+# Run all tests (27 total)
 cargo test
 
-# Run with specific output
+# Run specific test modules
+cargo test config_tests     # Configuration tests
+cargo test instance_tests   # Instance management tests
+cargo test metrics_tests    # Performance metrics tests
+cargo test ip_cache_tests   # IP caching tests
+cargo test buffer_pool_tests # Buffer management tests
+
+# Run with verbose output
 cargo test -- --nocapture
 
-# Run integration tests only
-cargo test integration
+# Run specific test function
+cargo test test_config_creation
 ```
 
 ## 🏗️ Architecture
@@ -186,20 +217,34 @@ cargo test integration
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Web Client    │    │   REST API      │    │  Instance Mgr   │
+│   (Embedded)    │    │   (Axum)        │    │  (Arc<RwLock>)  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
                                  │
-                    ┌─────────────────┐
-                    │   TCP/UDP       │
-                    │   Proxy Core    │
-                    └─────────────────┘
+                    ┌─────────────────┐    ┌─────────────────┐
+                    │   TCP/UDP       │    │   Metrics &     │
+                    │   Proxy Core    │    │   Monitoring    │
+                    │   (Tokio)       │    │   (Atomic)      │
+                    └─────────────────┘    └─────────────────┘
+                                 │                       │
+                    ┌─────────────────┐    ┌─────────────────┐
+                    │   Buffer Pool   │    │   IP Cache      │
+                    │   (Memory Mgmt) │    │   (TTL/LRU)     │
+                    └─────────────────┘    └─────────────────┘
                                  │
                     ┌─────────────────┐
                     │   Storage       │
-                    │   Manager       │
+                    │   (TOML)        │
                     └─────────────────┘
 ```
+
+### Key Features
+- **📦 Embedded Assets**: All static files (HTML, CSS, JS) are embedded in the binary
+- **🧵 Thread Safety**: Uses `Arc<RwLock<T>>` for concurrent instance management
+- **⚡ Async Performance**: Built on Tokio for high-performance I/O operations
+- **🎯 Smart Caching**: IP address filtering with TTL-based expiration and LRU eviction
+- **💾 Efficient Memory**: Three-tier buffer pool system for optimal memory usage
 
 ## 🤝 Contributing
 

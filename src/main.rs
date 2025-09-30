@@ -59,8 +59,7 @@ async fn main() -> Result<()> {
     let storage_manager = Arc::new(storage::StorageManager::new(args.config_path.clone()));
     let instance_service = Arc::new(InstanceService::with_storage(storage_manager.clone()));
 
-    // Load instances in background to avoid blocking startup
-    let storage_manager_bg = storage_manager.clone();
+        let storage_manager_bg = storage_manager.clone();
     let instance_service_bg = instance_service.clone();
     tokio::spawn(async move {
         match storage_manager_bg.load().await {

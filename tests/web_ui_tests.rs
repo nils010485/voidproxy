@@ -4,7 +4,7 @@ use axum::Router;
 #[tokio::test]
 async fn test_web_ui_routes_creation() {
     let api_port = 8080;
-    let router = create_routes(api_port);
+    let _router = create_routes(api_port);
 
     assert!(true);
 }
@@ -12,15 +12,15 @@ async fn test_web_ui_routes_creation() {
 #[tokio::test]
 async fn test_web_ui_route_paths() {
     let api_port = 8080;
-    let router = create_routes(api_port);
+    let _router = create_routes(api_port);
 
     assert!(true);
 }
 
 #[tokio::test]
 async fn test_web_ui_different_api_ports() {
-    let router1 = create_routes(8080);
-    let router2 = create_routes(9000);
+    let _router1 = create_routes(8080);
+    let _router2 = create_routes(9000);
 
     assert!(true);
 }
@@ -28,7 +28,7 @@ async fn test_web_ui_different_api_ports() {
 #[tokio::test]
 async fn test_web_ui_route_methods() {
     let api_port = 8080;
-    let router = create_routes(api_port);
+    let _router = create_routes(api_port);
 
     assert!(true);
 }
@@ -55,8 +55,8 @@ async fn test_web_ui_content_type_mapping() {
 
 #[tokio::test]
 async fn test_web_ui_multiple_routers_independence() {
-    let router1 = create_routes(8080);
-    let router2 = create_routes(9000);
+    let _router1 = create_routes(8080);
+    let _router2 = create_routes(9000);
 
     assert!(true);
 }
@@ -64,7 +64,7 @@ async fn test_web_ui_multiple_routers_independence() {
 #[tokio::test]
 async fn test_web_ui_root_route_handler() {
     let api_port = 8080;
-    let router = create_routes(api_port);
+    let _router = create_routes(api_port);
 
     assert!(true);
 }
@@ -72,7 +72,7 @@ async fn test_web_ui_root_route_handler() {
 #[tokio::test]
 async fn test_web_ui_static_route_handler() {
     let api_port = 8080;
-    let router = create_routes(api_port);
+    let _router = create_routes(api_port);
 
     assert!(true);
 }
@@ -80,7 +80,7 @@ async fn test_web_ui_static_route_handler() {
 #[tokio::test]
 async fn test_web_ui_no_post_routes() {
     let api_port = 8080;
-    let router = create_routes(api_port);
+    let _router = create_routes(api_port);
 
     assert!(true);
 }
@@ -88,7 +88,7 @@ async fn test_web_ui_no_post_routes() {
 #[tokio::test]
 async fn test_web_ui_no_put_routes() {
     let api_port = 8080;
-    let router = create_routes(api_port);
+    let _router = create_routes(api_port);
 
     assert!(true);
 }
@@ -96,7 +96,7 @@ async fn test_web_ui_no_put_routes() {
 #[tokio::test]
 async fn test_web_ui_no_delete_routes() {
     let api_port = 8080;
-    let router = create_routes(api_port);
+    let _router = create_routes(api_port);
 
     assert!(true);
 }
@@ -114,6 +114,7 @@ fn get_content_type_for_filename(filename: &str) -> &'static str {
     }
 }
 
+#[allow(dead_code)]
 fn create_ports(api_port: u16) -> Router {
     create_routes(api_port)
 }

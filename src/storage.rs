@@ -130,8 +130,11 @@ impl StorageManager {
     }
     pub async fn update_instance(&self, instance: &ProxyInstance) -> Result<()> {
         let mut data = self.data.write().await;
-        data.instances.retain(|i| i.id != instance.id);
-        data.instances.push(instance.clone().into());
+        if let Some(index) = data.instances.iter().position(|i| i.id == instance.id) {
+            data.instances[index] = instance.clone().into();
+        } else {
+            data.instances.push(instance.clone().into());
+        }
         data.updated_at = chrono::Utc::now().to_rfc3339();
         let content = toml::to_string_pretty(&*data)
             .map_err(|e| anyhow::anyhow!("Failed to serialize configuration: {}", e))?;
@@ -153,6 +156,8 @@ impl StorageManager {
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to write config file: {}", e))?;
             debug!("Removed instance {} from configuration", instance_id);
+        } else {
+            debug!("Instance {} not found for removal", instance_id);
         }
         Ok(())
     }

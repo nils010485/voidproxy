@@ -12,14 +12,16 @@ pub fn create_routes(api_port: u16) -> Router {
         .route("/", get(move || root(api_port)))
         .route("/static/*path", get(static_files))
 }
-async fn root(api_port: u16) -> Html<String> {
+async fn root(api_port: u16) -> Result<Html<String>, StatusCode> {
     let html = STATIC_DIR
         .get_file("html/index.html")
-        .unwrap()
-        .contents_utf8()
-        .unwrap();
+        .and_then(|f| f.contents_utf8())
+        .ok_or_else(|| {
+            tracing::error!("index.html not found in embedded static files");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     let html_with_port = html.replace("{{API_PORT}}", &api_port.to_string());
-    Html(html_with_port)
+    Ok(Html(html_with_port))
 }
 async fn static_files(Path(path): Path<String>) -> Result<Response, StatusCode> {
     let file = STATIC_DIR.get_file(&path).ok_or(StatusCode::NOT_FOUND)?;

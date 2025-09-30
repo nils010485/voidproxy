@@ -19,6 +19,11 @@ pub struct InstanceMetrics {
     pub errors: Arc<AtomicU32>,
     last_update: Arc<RwLock<Instant>>,
 }
+impl Default for InstanceMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl InstanceMetrics {
     pub fn new() -> Self {
         Self {
@@ -31,11 +36,15 @@ impl InstanceMetrics {
         }
     }
     pub fn add_bytes_sent(&self, bytes: u64) {
-        self.bytes_sent.fetch_add(bytes, Ordering::Relaxed);
+        self.bytes_sent.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+            current.checked_add(bytes).or(Some(u64::MAX))
+        }).ok();
         self.update_timestamp();
     }
     pub fn add_bytes_received(&self, bytes: u64) {
-        self.bytes_received.fetch_add(bytes, Ordering::Relaxed);
+        self.bytes_received.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+            current.checked_add(bytes).or(Some(u64::MAX))
+        }).ok();
         self.update_timestamp();
     }
     fn update_timestamp(&self) {
@@ -127,6 +136,11 @@ pub struct SessionMetrics {
     pub cleanup_interval_seconds: u64,
     pub active_sessions: usize,
 }
+impl Default for MetricsManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl MetricsManager {
     pub fn new() -> Self {
         let manager = Self {
@@ -154,8 +168,8 @@ impl MetricsManager {
                 let uptime = start_time.elapsed().as_secs();
                 let (total_memory, used_memory) = if let Ok(mem_info) = sys_info::mem_info() {
                     (
-                        mem_info.total as u64 / (1024 * 1024),
-                        (mem_info.total - mem_info.free) as u64 / (1024 * 1024),
+                        mem_info.total / (1024 * 1024),
+                        (mem_info.total - mem_info.free) / (1024 * 1024),
                     )
                 } else {
                     (0, 0)

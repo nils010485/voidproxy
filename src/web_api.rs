@@ -294,7 +294,6 @@ async fn health_check(
 ) -> Result<Json<HealthResponse>, StatusCode> {
     debug!("Health check requested");
     let instances = service.get_instances().await;
-    let active_instances = instances.iter().filter(|inst| inst.status == crate::instance::InstanceStatus::Running).count();
     Ok(Json(HealthResponse {
         status: "healthy".to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
@@ -303,6 +302,6 @@ async fn health_check(
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs(),
-        instance_count: active_instances,
+        instance_count: instances.len(),
     }))
 }
