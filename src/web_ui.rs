@@ -24,13 +24,11 @@ async fn root(api_port: u16) -> Result<Html<String>, StatusCode> {
     Ok(Html(html_with_port))
 }
 async fn static_files(Path(path): Path<String>) -> Result<Response, StatusCode> {
-    let sanitized_path = path
-        .split('.')
-        .next()
-        .ok_or(StatusCode::BAD_REQUEST)?
-        .trim_start_matches('/')
-        .trim_start_matches("..")
-        .trim_start_matches('/');
+    if path.contains("..") {
+        tracing::warn!("Blocked path traversal attempt: {}", path);
+        return Err(StatusCode::FORBIDDEN);
+    }
+    let sanitized_path = path.trim_start_matches('/');
     let file = STATIC_DIR.get_file(sanitized_path).ok_or(StatusCode::NOT_FOUND)?;
     let content_type = match path.as_str() {
         p if p.ends_with(".css") => "text/css",
