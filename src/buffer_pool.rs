@@ -263,7 +263,13 @@ pub fn new(session_timeout: Duration, cleanup_interval: Duration) -> Self {
         };
         match tokio::net::UdpSocket::bind(bind_addr).await {
             Ok(client_socket) => {
-                let local_addr = client_socket.local_addr().unwrap();
+                let local_addr = match client_socket.local_addr() {
+                    Ok(addr) => addr,
+                    Err(e) => {
+                        tracing::error!("Failed to get local address for {}: {}", peer_addr, e);
+                        return None;
+                    }
+                };
                 let session = UdpSession::new(Arc::new(client_socket), local_addr);
                 sessions.insert(peer_addr, session.clone());
                 Some(session)

@@ -1,4 +1,4 @@
-# 🌌 VoidProxy
+# VoidProxy
 
 <div align="center">
 
@@ -14,17 +14,17 @@
 
 </div>
 
-## 🚀 Features
+## Features
 
-- ⚡ **High Performance**: Built with Rust and Tokio for maximum throughput
-- 🌐 **Dual Protocol**: Support for both TCP and UDP proxying
-- 🎛️ **Web Management**: Intuitive web interface with modern design
-- 🔒 **IP Filtering**: Flexible allow/deny lists for access control
-- 💾 **Persistent Storage**: Automatic configuration persistence
-- 📊 **Real-time Monitoring**: Live statistics and connection tracking
-- 🛡️ **REST API**: Complete automation interface
+- **High Performance**: Built with Rust and Tokio for maximum throughput
+- **Dual Protocol**: Support for both TCP and UDP proxying
+- **Web Management**: Intuitive web interface with modern design
+- **IP Filtering**: Flexible allow/deny lists for access control
+- **Persistent Storage**: Automatic configuration persistence
+- **Real-time Monitoring**: Live statistics and connection tracking
+- **REST API**: Complete automation interface
 
-## 📦 Installation
+## Installation
 
 ### From Source
 
@@ -39,7 +39,7 @@ cargo build --release
 - Rust 1.70+
 - Tokio runtime
 
-## 🎯 Usage
+## Usage
 
 ### Basic Usage
 
@@ -66,7 +66,7 @@ cargo build --release
 | `--config-path` | Configuration file path | `instances.toml` |
 | `--verbose` | Enable verbose logging | `false` |
 
-## 🖥️ Web UI
+## Web UI
 
 Access the web interface at `http://localhost:8080` (or your custom port):
 
@@ -74,7 +74,7 @@ Access the web interface at `http://localhost:8080` (or your custom port):
 
 <img src="https://cdn.angelkarlsson.eu/persist/voidproxy/webui.png" alt="VoidProxy Web UI" width="800">
 
-## ⚙️ Configuration
+## Configuration
 
 ### Example Configuration
 
@@ -104,7 +104,7 @@ allow_list = ["192.168.1.10", "192.168.1.20"]
 - **allow_list**: List of allowed IP addresses (optional)
 - **deny_list**: List of blocked IP addresses (optional)
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Instances
 
@@ -138,7 +138,7 @@ curl -X POST http://127.0.0.1:8080/api/instances \
   }'
 ```
 
-## 🌳 Project Structure
+## Project Structure
 
 ```
 voidProxy/
@@ -177,7 +177,7 @@ voidProxy/
 └── README.md                 # This file
 ```
 
-## 🧪 Testing
+## Testing
 
 The project includes comprehensive test coverage with **27 total tests**:
 
@@ -212,7 +212,7 @@ cargo test -- --nocapture
 cargo test test_config_creation
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -240,13 +240,13 @@ cargo test test_config_creation
 ```
 
 ### Key Features
-- **📦 Embedded Assets**: All static files (HTML, CSS, JS) are embedded in the binary
-- **🧵 Thread Safety**: Uses `Arc<RwLock<T>>` for concurrent instance management
-- **⚡ Async Performance**: Built on Tokio for high-performance I/O operations
-- **🎯 Smart Caching**: IP address filtering with TTL-based expiration and LRU eviction
-- **💾 Efficient Memory**: Three-tier buffer pool system for optimal memory usage
+- **Embedded Assets**: All static files (HTML, CSS, JS) are embedded in the binary
+- **Thread Safety**: Uses `Arc<RwLock<T>>` for concurrent instance management
+- **Async Performance**: Built on Tokio for high-performance I/O operations
+- **Smart Caching**: IP address filtering with TTL-based expiration and LRU eviction
+- **Efficient Memory**: Three-tier buffer pool system for optimal memory usage
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
@@ -254,13 +254,13 @@ cargo test test_config_creation
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.
 
 The author of this software cannot be held responsible for any damages or issues that may arise from its use. Use at your own risk and discretion.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License
 
@@ -268,6 +268,6 @@ This project is licensed under the MIT License
 
 <div align="center">
 
-Made with ❤️ by [Nils](https://nils.begou.dev)
+Made with passion by [Nils](https://nils.begou.dev)
 
 </div>

@@ -26,7 +26,7 @@ pub struct ProxyConfig {
     pub protocol: Protocol,
     pub connect_timeout_secs: u64,
     pub idle_timeout_secs: u64,
-    pub log_level: String,
+    pub log_level: LogLevel,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -84,14 +84,6 @@ impl Config {
         }
         if self.proxy.idle_timeout_secs > 3600 {
             return Err(anyhow::anyhow!("Idle timeout cannot exceed 3600 seconds"));
-        }
-        let valid_log_levels = ["error", "warn", "info", "debug", "trace"];
-        if !valid_log_levels.contains(&self.proxy.log_level.as_str()) {
-            return Err(anyhow::anyhow!(
-                "Invalid log level '{}'. Must be one of: {}",
-                self.proxy.log_level,
-                valid_log_levels.join(", ")
-            ));
         }
         if self.proxy.listen_port == self.proxy.dst_port
             && self.proxy.listen_ip == self.proxy.dst_ip

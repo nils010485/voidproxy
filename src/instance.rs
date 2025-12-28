@@ -1,4 +1,4 @@
-use crate::config::{Config, Protocol};
+use crate::config::{Config, LogLevel, Protocol};
 use crate::metrics::InstanceMetrics;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -85,7 +85,7 @@ pub struct CreateInstanceRequest {
     pub deny_list: Option<Vec<IpAddr>>,
     pub connect_timeout_secs: u64,
     pub idle_timeout_secs: u64,
-    pub log_level: String,
+    pub log_level: LogLevel,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /**
@@ -144,6 +144,15 @@ impl CreateInstanceRequestStrings {
             })
             .transpose()
             .map_err(|e| format!("Invalid deny list: {}", e))?;
+        let log_level = self.log_level.to_lowercase();
+        let log_level = match log_level.as_str() {
+            "error" => LogLevel::Error,
+            "warn" => LogLevel::Warn,
+            "info" => LogLevel::Info,
+            "debug" => LogLevel::Debug,
+            "trace" => LogLevel::Trace,
+            _ => return Err(format!("Invalid log level: {}", self.log_level)),
+        };
         Ok(CreateInstanceRequest {
             name: self.name.clone(),
             listen_ip,
@@ -156,7 +165,7 @@ impl CreateInstanceRequestStrings {
             deny_list,
             connect_timeout_secs: self.connect_timeout_secs,
             idle_timeout_secs: self.idle_timeout_secs,
-            log_level: self.log_level.clone(),
+            log_level,
         })
     }
 }
@@ -171,7 +180,7 @@ impl CreateInstanceRequest {
                 protocol: self.protocol,
                 connect_timeout_secs: self.connect_timeout_secs,
                 idle_timeout_secs: self.idle_timeout_secs,
-                log_level: self.log_level.clone(),
+                log_level: self.log_level,
             },
             ip_filter: if self.allow_list.is_some() || self.deny_list.is_some() {
                 Some(crate::config::IpFilterConfig {
@@ -203,7 +212,7 @@ pub struct UpdateInstanceRequest {
     pub deny_list: Option<Vec<IpAddr>>,
     pub connect_timeout_secs: Option<u64>,
     pub idle_timeout_secs: Option<u64>,
-    pub log_level: Option<String>,
+    pub log_level: Option<LogLevel>,
 }
 impl UpdateInstanceRequest {
     pub fn apply_to(&self, instance: &mut ProxyInstance) {
@@ -240,8 +249,8 @@ impl UpdateInstanceRequest {
         if let Some(idle_timeout_secs) = self.idle_timeout_secs {
             instance.config.proxy.idle_timeout_secs = idle_timeout_secs;
         }
-        if let Some(log_level) = &self.log_level {
-            instance.config.proxy.log_level = log_level.clone();
+        if let Some(log_level) = self.log_level {
+            instance.config.proxy.log_level = log_level;
         }
     }
 }

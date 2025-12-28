@@ -24,7 +24,14 @@ async fn root(api_port: u16) -> Result<Html<String>, StatusCode> {
     Ok(Html(html_with_port))
 }
 async fn static_files(Path(path): Path<String>) -> Result<Response, StatusCode> {
-    let file = STATIC_DIR.get_file(&path).ok_or(StatusCode::NOT_FOUND)?;
+    let sanitized_path = path
+        .split('.')
+        .next()
+        .ok_or(StatusCode::BAD_REQUEST)?
+        .trim_start_matches('/')
+        .trim_start_matches("..")
+        .trim_start_matches('/');
+    let file = STATIC_DIR.get_file(sanitized_path).ok_or(StatusCode::NOT_FOUND)?;
     let content_type = match path.as_str() {
         p if p.ends_with(".css") => "text/css",
         p if p.ends_with(".js") => "application/javascript",
@@ -36,8 +43,8 @@ async fn static_files(Path(path): Path<String>) -> Result<Response, StatusCode> 
         _ => "application/octet-stream",
     };
     let content = file.contents().to_vec();
-    Ok(Response::builder()
+    Response::builder()
         .header(header::CONTENT_TYPE, content_type)
         .body(content.into())
-        .unwrap())
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
